@@ -78,4 +78,3 @@ deployment-lab/
 
 - Hugging Face caches live under the default `HF_HOME`. Set it before launch if needed.
 - CUDA is used automatically when available; otherwise models fall back to CPU.
-# deployment-lab
