@@ -1,0 +1,7 @@
+FROM vllm/vllm-openai:cu130-nightly
+
+# 安装 git（必须在 pip/uv 安装 git+https:// 之前）
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+
+# 安装 transformers 最新源码（HF 官方文档给的安装方式之一）
+RUN uv pip install --system git+https://github.com/huggingface/transformers.git
