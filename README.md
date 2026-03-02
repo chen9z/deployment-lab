@@ -40,6 +40,42 @@ You can still use uvicorn directly:
 uvicorn server:app --host 0.0.0.0 --port 8000
 ```
 
+### Qwen3.5-27B-FP8 on RTX 5090 (32GB, vLLM + uv)
+
+For local vLLM deployment of `Qwen3.5-27B-FP8`, use the script below:
+
+```bash
+script/run_qwen35_27b_fp8_5090.sh
+```
+
+This keeps the tool-use parser settings and applies single-GPU-safe defaults:
+
+- `--tensor-parallel-size 1` on a single 5090 (auto-clamped if you set a larger value)
+- `--max-model-len 65536` (safer than multi-GPU defaults)
+- `--gpu-memory-utilization 0.90`
+- `--max-num-seqs 2`
+- `--kv-cache-dtype fp8`
+- `--reasoning-parser qwen3`
+- `--enable-auto-tool-choice`
+- `--tool-call-parser qwen3_coder`
+- `--speculative-config '{"method":"mtp","num_speculative_tokens":1}'`
+
+Optional overrides:
+
+```bash
+MAX_MODEL_LEN=32768 GPU_MEMORY_UTILIZATION=0.99 PORT=8002 script/run_qwen35_27b_fp8_5090.sh
+```
+
+Speculative decode override:
+
+```bash
+# disable MTP
+SPECULATIVE_CONFIG=off script/run_qwen35_27b_fp8_5090.sh
+
+# custom MTP
+SPECULATIVE_CONFIG='{"method":"mtp","num_speculative_tokens":2}' script/run_qwen35_27b_fp8_5090.sh
+```
+
 ### Endpoints
 - `GET /` – service metadata & supported models
 - `GET /v1/models` – supported models in OpenAI schema

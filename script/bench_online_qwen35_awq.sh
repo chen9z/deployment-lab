@@ -1,6 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PYTHON_BIN="${PYTHON_BIN:-$ROOT_DIR/.venv/bin/python}"
+UV_BIN="${UV_BIN:-$(command -v uv || true)}"
+VLLM_CMD=("$UV_BIN" run --python "$PYTHON_BIN" vllm)
+
+if [[ -z "$UV_BIN" ]]; then
+  echo "uv not found in PATH."
+  exit 1
+fi
+
+if [[ ! -x "$PYTHON_BIN" ]]; then
+  echo "Python not found at $PYTHON_BIN"
+  exit 1
+fi
+
 # =========================
 # Config
 # =========================
@@ -45,13 +60,13 @@ fi
 echo
 echo "[INFO] Starting sweeps..."
 
-if vllm bench serve --help=all 2>/dev/null | grep -q -- '--dataset-name'; then
+if "${VLLM_CMD[@]}" bench serve --help=all 2>/dev/null | grep -q -- '--dataset-name'; then
   DATASET_FLAG="--dataset-name"
 else
   DATASET_FLAG="--dataset"
 fi
 
-if vllm bench serve --help=all 2>/dev/null | grep -q -- '--num-prompts'; then
+if "${VLLM_CMD[@]}" bench serve --help=all 2>/dev/null | grep -q -- '--num-prompts'; then
   COUNT_FLAG="--num-prompts"
 else
   COUNT_FLAG="--num-requests"
@@ -73,7 +88,7 @@ for IN_LEN in "${INPUT_LEN_LIST[@]}"; do
       echo "[RUN] $NAME"
       # 说明：vllm bench serve 会输出吞吐与延迟统计（TTFT/TPOT/ITL等随版本略有差异）
       #      参数名与含义见 vLLM bench serve 文档
-      vllm bench serve \
+      "${VLLM_CMD[@]}" bench serve \
         --base-url "${BASE_URL}" \
         --model "${MODEL_REPO}" \
         --served-model-name "${MODEL}" \
