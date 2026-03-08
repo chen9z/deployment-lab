@@ -25,12 +25,21 @@ TP_SIZE="${TP_SIZE:-1}"
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-65536}"
 GPU_MEMORY_UTILIZATION="${GPU_MEMORY_UTILIZATION:-0.90}"
 MAX_NUM_SEQS="${MAX_NUM_SEQS:-2}"
-KV_CACHE_DTYPE="${KV_CACHE_DTYPE:-fp8}"
-SPECULATIVE_CONFIG="${SPECULATIVE_CONFIG:-}"
+MAX_NUM_BATCHED_TOKENS="${MAX_NUM_BATCHED_TOKENS:-2048}"
+KV_CACHE_DTYPE="${KV_CACHE_DTYPE:-}"
+ENABLE_PREFIX_CACHING="${ENABLE_PREFIX_CACHING:-0}"
+LIMIT_MM_PER_PROMPT_VIDEO="${LIMIT_MM_PER_PROMPT_VIDEO:-0}"
+SPECULATIVE_CONFIG="${SPECULATIVE_CONFIG:-off}"
 SPECULATIVE_ARGS=()
+PREFIX_CACHING_ARGS=()
+KV_CACHE_DTYPE_ARGS=()
 
-if [[ -z "$SPECULATIVE_CONFIG" ]]; then
-  SPECULATIVE_CONFIG='{"method":"mtp","num_speculative_tokens":1}'
+if [[ "$ENABLE_PREFIX_CACHING" == "1" ]]; then
+  PREFIX_CACHING_ARGS=(--enable-prefix-caching)
+fi
+
+if [[ -n "$KV_CACHE_DTYPE" ]]; then
+  KV_CACHE_DTYPE_ARGS=(--kv-cache-dtype "$KV_CACHE_DTYPE")
 fi
 
 if [[ ! -d "$MODEL_PATH" ]]; then
@@ -83,10 +92,14 @@ exec "$UV_BIN" run --python "$PYTHON_BIN" vllm serve "$MODEL_PATH" \
   --max-model-len "$MAX_MODEL_LEN" \
   --gpu-memory-utilization "$GPU_MEMORY_UTILIZATION" \
   --max-num-seqs "$MAX_NUM_SEQS" \
-  --kv-cache-dtype "$KV_CACHE_DTYPE" \
+  --max-num-batched-tokens "$MAX_NUM_BATCHED_TOKENS" \
+  "${KV_CACHE_DTYPE_ARGS[@]}" \
+  --attention-backend FLASHINFER \
+  --limit-mm-per-prompt.video "$LIMIT_MM_PER_PROMPT_VIDEO" \
   --reasoning-parser qwen3 \
   --enable-auto-tool-choice \
   --tool-call-parser qwen3_coder \
+  "${PREFIX_CACHING_ARGS[@]}" \
   "${SPECULATIVE_ARGS[@]}" \
   --disable-log-requests \
   "$@"

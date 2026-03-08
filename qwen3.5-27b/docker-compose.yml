@@ -1,6 +1,6 @@
 services:
   vllm:
-    image: vllm-openai:cu130-nightly-tfmain
+    image: vllm/vllm-openai:cu130-nightly
     container_name: vllm-qwen35-27b
     ports:
       - "8001:8001"
@@ -8,6 +8,9 @@ services:
       - ${HOME}/.cache/huggingface:/root/.cache/huggingface
     environment:
       - HF_HOME=/root/.cache/huggingface
+      - OMP_NUM_THREADS=8
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+      - VLLM_NVFP4_GEMM_BACKEND=marlin
     ipc: host
     restart: unless-stopped
     deploy:
@@ -23,15 +26,17 @@ services:
       --tensor-parallel-size 1
       --max-model-len 262144
       --kv-cache-dtype fp8
-      --max-num-seqs 2
+      --gpu-memory-utilization 0.92
+      --max-num-seqs 4
+      --max-num-batched-tokens 4096
+      --enable-prefix-caching
+      --attention-backend FLASHINFER
       --served-model-name Qwen3.5-27B
       --host 0.0.0.0 --port 8001
       --reasoning-parser qwen3
       --enable-auto-tool-choice
       --tool-call-parser qwen3_coder
       --limit-mm-per-prompt.video 0
-      --speculative-config '{"method": "mtp", "num_speculative_tokens": 1}'
       --async-scheduling
-      --disable-log-requests
       --generation-config auto
       --override-generation-config '{"temperature":0.6,"top_p":0.95,"top_k":20,"min_p":0.0,"presence_penalty":0.0,"repetition_penalty":1.0}'
