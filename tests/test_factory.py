@@ -4,6 +4,7 @@ from models.factory import ModelFactory
 def test_supported_models():
     models = ModelFactory.get_supported_models()
     assert models["jinaai/jina-embeddings-v4"] == "embedding"
+    assert models["jinaai/jina-embeddings-v5-text-small-retrieval"] == "embedding"
     assert models["jinaai/jina-code-embeddings-1.5b"] == "embedding"
     assert models["Qwen/Qwen3-Embedding-4B"] == "embedding"
     assert models["jinaai/jina-reranker-m0"] == "rerank"
@@ -12,6 +13,10 @@ def test_supported_models():
 
 def test_create_model_types():
     assert ModelFactory.create_model("jinaai/jina-embeddings-v4").get_type() == "embedding"
+    assert (
+        ModelFactory.create_model("jinaai/jina-embeddings-v5-text-small-retrieval").get_type()
+        == "embedding"
+    )
     assert (
         ModelFactory.create_model("jinaai/jina-code-embeddings-1.5b").get_type()
         == "embedding"

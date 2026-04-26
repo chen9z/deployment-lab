@@ -11,8 +11,9 @@ if [[ ! -f "$VENV_ACTIVATE" ]]; then
   exit 1
 fi
 
-MODEL_REPO="Kbenkhaled/Qwen3.5-27B-NVFP4"
-SERVED_MODEL="Qwen3.5-27B"
+MODEL_REPO="/models/qwen36-27b"
+SERVED_MODEL="Qwen3.6-27B"
+MODEL_DIR="${MODEL_DIR:-$REPO_ROOT/models/Lorbus/Qwen3.6-27B-int4-AutoRound}"
 
 # Benchmark workload (adjust if needed)
 NUM_PROMPTS=80
@@ -22,8 +23,8 @@ MAX_CONCURRENCY=8
 REQUEST_RATE="inf"
 BENCH_TIMEOUT_SEC=900
 
-GPU_MEMORY_UTILIZATION_CANDIDATES=("0.92" "0.94")
-MAX_NUM_SEQS_CANDIDATES=("3" "4")
+GPU_MEMORY_UTILIZATION_CANDIDATES=("0.92" "0.90" "0.88")
+MAX_NUM_SEQS_CANDIDATES=("4" "2" "1")
 MAX_NUM_BATCHED_TOKENS="4096"
 
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
@@ -39,13 +40,15 @@ write_compose() {
 services:
   vllm:
     image: vllm-openai:cu130-nightly-tfmain
-    container_name: vllm-qwen35-27b
+    container_name: vllm-qwen36-27b
     ports:
       - "8001:8001"
     volumes:
+      - ${MODEL_DIR}:/models/qwen36-27b:ro
       - \${HOME}/.cache/huggingface:/root/.cache/huggingface
     environment:
       - HF_HOME=/root/.cache/huggingface
+      - NVIDIA_VISIBLE_DEVICES=0
     ipc: host
     restart: unless-stopped
     deploy:
@@ -53,11 +56,12 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: all
+              device_ids: ["0"]
               capabilities: [gpu]
 
     command: >
       ${MODEL_REPO}
+      --dtype half
       --tensor-parallel-size 1
       --max-model-len 262144
       --kv-cache-dtype fp8
@@ -70,9 +74,10 @@ services:
       --host 0.0.0.0 --port 8001
       --reasoning-parser qwen3
       --enable-auto-tool-choice
-      --tool-call-parser qwen3_coder
+      --tool-call-parser qwen3_xml
       --limit-mm-per-prompt.video 0
-      --speculative-config '{"method": "mtp", "num_speculative_tokens": 1}'
+      --compilation-config.cudagraph_mode none
+      --speculative-config '{"method": "mtp", "num_speculative_tokens": 3}'
       --async-scheduling
       --disable-log-requests
       --generation-config auto
