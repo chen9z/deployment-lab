@@ -27,8 +27,11 @@ GPU_MEMORY_UTILIZATION="${GPU_MEMORY_UTILIZATION:-0.92}"
 MAX_NUM_SEQS="${MAX_NUM_SEQS:-4}"
 MAX_NUM_BATCHED_TOKENS="${MAX_NUM_BATCHED_TOKENS:-4096}"
 KV_CACHE_DTYPE="${KV_CACHE_DTYPE:-fp8}"
+QUANTIZATION="${QUANTIZATION:-auto_round}"
 DTYPE="${DTYPE:-half}"
 ENABLE_PREFIX_CACHING="${ENABLE_PREFIX_CACHING:-1}"
+SKIP_MM_PROFILING="${SKIP_MM_PROFILING:-1}"
+ENABLE_CHUNKED_PREFILL="${ENABLE_CHUNKED_PREFILL:-1}"
 LIMIT_MM_PER_PROMPT_VIDEO="${LIMIT_MM_PER_PROMPT_VIDEO:-0}"
 DEFAULT_SPECULATIVE_CONFIG='{"method":"mtp","num_speculative_tokens":3}'
 SPECULATIVE_CONFIG="${SPECULATIVE_CONFIG:-$DEFAULT_SPECULATIVE_CONFIG}"
@@ -38,8 +41,10 @@ CUDAGRAPH_MODE="${CUDAGRAPH_MODE:-none}"
 SPECULATIVE_ARGS=()
 PREFIX_CACHING_ARGS=()
 KV_CACHE_DTYPE_ARGS=()
+QUANTIZATION_ARGS=()
+SKIP_MM_PROFILING_ARGS=()
+CHUNKED_PREFILL_ARGS=()
 CUDAGRAPH_ARGS=()
-
 if [[ "$ENABLE_PREFIX_CACHING" == "1" ]]; then
   PREFIX_CACHING_ARGS=(--enable-prefix-caching)
 fi
@@ -48,14 +53,26 @@ if [[ -n "$KV_CACHE_DTYPE" ]]; then
   KV_CACHE_DTYPE_ARGS=(--kv-cache-dtype "$KV_CACHE_DTYPE")
 fi
 
-if [[ -n "$DTYPE" ]]; then
-  DTYPE_ARGS=(--dtype "$DTYPE")
-else
-  DTYPE_ARGS=()
+if [[ -n "$QUANTIZATION" ]]; then
+  QUANTIZATION_ARGS=(--quantization "$QUANTIZATION")
+fi
+
+if [[ "$SKIP_MM_PROFILING" == "1" ]]; then
+  SKIP_MM_PROFILING_ARGS=(--skip-mm-profiling)
+fi
+
+if [[ "$ENABLE_CHUNKED_PREFILL" == "1" ]]; then
+  CHUNKED_PREFILL_ARGS=(--enable-chunked-prefill)
 fi
 
 if [[ -n "$CUDAGRAPH_MODE" ]]; then
   CUDAGRAPH_ARGS=(--compilation-config.cudagraph_mode "$CUDAGRAPH_MODE")
+fi
+
+if [[ -n "$DTYPE" ]]; then
+  DTYPE_ARGS=(--dtype "$DTYPE")
+else
+  DTYPE_ARGS=()
 fi
 
 if [[ ! -d "$MODEL_PATH" ]]; then
@@ -105,13 +122,16 @@ exec "$UV_BIN" run --python "$PYTHON_BIN" vllm serve "$MODEL_PATH" \
   --host "$HOST" \
   --port "$PORT" \
   --tensor-parallel-size "$TP_SIZE" \
+  "${QUANTIZATION_ARGS[@]}" \
   "${DTYPE_ARGS[@]}" \
   --max-model-len "$MAX_MODEL_LEN" \
   --gpu-memory-utilization "$GPU_MEMORY_UTILIZATION" \
   --max-num-seqs "$MAX_NUM_SEQS" \
   --max-num-batched-tokens "$MAX_NUM_BATCHED_TOKENS" \
   "${KV_CACHE_DTYPE_ARGS[@]}" \
+  "${SKIP_MM_PROFILING_ARGS[@]}" \
   --attention-backend FLASHINFER \
+  "${CHUNKED_PREFILL_ARGS[@]}" \
   --limit-mm-per-prompt.video "$LIMIT_MM_PER_PROMPT_VIDEO" \
   --reasoning-parser "$REASONING_PARSER" \
   --enable-auto-tool-choice \

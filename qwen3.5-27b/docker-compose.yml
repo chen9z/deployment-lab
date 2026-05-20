@@ -1,47 +1,49 @@
 services:
-  vllm:
-    image: ${QWEN36_VLLM_IMAGE:-vllm/vllm-openai:nightly}
-    container_name: vllm-qwen36-27b
-    ports:
-      - "8001:8001"
-    volumes:
-      - ../models/Lorbus/Qwen3.6-27B-int4-AutoRound:/models/qwen36-27b:ro
-    environment:
-      - HF_HOME=/root/.cache/huggingface
-      - CUDA_DEVICE_ORDER=PCI_BUS_ID
-      - OMP_NUM_THREADS=4
-      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-      - NVIDIA_VISIBLE_DEVICES=0
-    ipc: host
-    restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              device_ids: ["0"]
-              capabilities: [gpu]
+    vllm:
+        image: ${QWEN36_VLLM_IMAGE:-vllm/vllm-openai:nightly-rollback-20260516}
+        container_name: vllm-qwen36-27b
+        ports:
+            - "8001:8001"
+        volumes:
+            - ../models/Lorbus/Qwen3.6-27B-int4-AutoRound:/models/qwen36-27b:ro
+        environment:
+            - HF_HOME=/root/.cache/huggingface
+            - CUDA_DEVICE_ORDER=PCI_BUS_ID
+            - OMP_NUM_THREADS=4
+            - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+            - NVIDIA_VISIBLE_DEVICES=0
+        ipc: host
+        restart: unless-stopped
+        deploy:
+            resources:
+                reservations:
+                    devices:
+                        - driver: nvidia
+                          device_ids: ["0"]
+                          capabilities: [gpu]
 
-    command: >
-      /models/qwen36-27b
-      --dtype half
-      --tensor-parallel-size 1
-      --max-model-len 262144
-      --kv-cache-dtype fp8
-      --gpu-memory-utilization 0.92
-      --max-num-seqs 4
-      --max-num-batched-tokens 4096
-      --enable-prefix-caching
-      --attention-backend FLASHINFER
-      --served-model-name Qwen3.5-27B
-      --host 0.0.0.0 --port 8001
-      --disable-uvicorn-access-log
-      --reasoning-parser qwen3
-      --enable-auto-tool-choice
-      --tool-call-parser qwen3_xml
-      --limit-mm-per-prompt.video 0
-      --compilation-config.cudagraph_mode none
-      --speculative-config '{"method": "mtp", "num_speculative_tokens": 3}'
-      --async-scheduling
-      --generation-config auto
-      --override-generation-config '{"temperature":0.6,"top_p":0.95,"top_k":20,"min_p":0.0,"presence_penalty":0.0,"repetition_penalty":1.0}'
+        command: >
+            /models/qwen36-27b
+            --tensor-parallel-size 1
+            --max-model-len 262144
+            --quantization auto_round
+            --skip-mm-profiling
+            --kv-cache-dtype fp8_e4m3
+            --gpu-memory-utilization 0.93
+            --max-num-seqs 4
+            --max-num-batched-tokens 4096
+            --enable-chunked-prefill
+            --performance-mode interactivity
+            --enable-prefix-caching
+            --attention-backend FLASHINFER
+            --served-model-name Qwen3.5-27B
+            --host 0.0.0.0 --port 8001
+            --disable-uvicorn-access-log
+            --reasoning-parser qwen3
+            --enable-auto-tool-choice
+            --tool-call-parser qwen3_coder
+            --limit-mm-per-prompt.video 0
+            --speculative-config '{"method": "mtp", "num_speculative_tokens": 3}'
+            --async-scheduling
+            --generation-config auto
+            --override-generation-config '{"temperature":0.6,"top_p":0.95,"top_k":20,"min_p":0.0,"presence_penalty":0.0,"repetition_penalty":1.0}'

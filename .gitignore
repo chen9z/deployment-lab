@@ -35,3 +35,6 @@ Thumbs.db
 # Model cache
 models_cache/
 models/
+
+# Runtime compile caches
+gemma-4-31b/cache/

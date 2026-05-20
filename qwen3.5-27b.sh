@@ -10,9 +10,12 @@ vllm serve "$ROOT_DIR/models/Lorbus/Qwen3.6-27B-int4-AutoRound" --served-model-n
 --max-model-len=262144 \
 --max-num-seqs=4 \
 --enable-auto-tool-choice \
---kv-cache-dtype fp8 \
+--quantization auto_round \
+--skip-mm-profiling \
+--kv-cache-dtype fp8_e4m3 \
 --tool-call-parser qwen3_xml \
 --reasoning-parser qwen3 \
+--enable-chunked-prefill \
 --enable-prefix-caching \
 --attention-backend FLASHINFER \
 --gpu-memory-utilization=0.92 \

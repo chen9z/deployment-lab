@@ -1,0 +1,45 @@
+services:
+  vllm:
+    image: vllm/vllm-openai:nightly-rollback-20260516
+    container_name: vllm-gemma4-26b-3090
+    ports:
+      - "8006:8006"
+    volumes:
+      - ../models/cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit:/models/gemma-4-26B-A4B-it-AWQ-4bit:ro
+    environment:
+      - CUDA_DEVICE_ORDER=PCI_BUS_ID
+      - CUDA_VISIBLE_DEVICES=1
+      - HF_HOME=/root/.cache/huggingface
+      - OMP_NUM_THREADS=4
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+      - NVIDIA_VISIBLE_DEVICES=1
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    gpus:
+      - driver: nvidia
+        device_ids: ["1"]
+        capabilities: [gpu]
+    ipc: host
+    restart: unless-stopped
+
+    command: >
+      /models/gemma-4-26B-A4B-it-AWQ-4bit
+      --served-model-name gemma-4-26B-A4B
+      --host 0.0.0.0
+      --port 8006
+      --quantization compressed-tensors
+      --tensor-parallel-size 1
+      --max-model-len 210000
+      --max-num-seqs 4
+      --block-size 16
+      --max-num-batched-tokens 4096
+      --gpu-memory-utilization 0.92
+      --enable-prefix-caching
+      --enable-auto-tool-choice
+      --reasoning-parser gemma4
+      --tool-call-parser gemma4
+      --async-scheduling
+      --generation-config auto
+      --override-generation-config '{"temperature":1.0,"top_p":0.95,"top_k":64}'
+      --limit-mm-per-prompt '{"image":2}'
+      --disable-uvicorn-access-log
+      --no-use-tqdm-on-load

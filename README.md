@@ -104,7 +104,7 @@ To benchmark the deployed 5090 service, run:
 script/bench_qwen36_27b_int4_5090.sh
 ```
 
-The script checks `/v1/models`, then runs a `llama-benchy` sweep over prompt length, context depth, and concurrency against `/v1/chat/completions`. It writes `summary.tsv` alongside the raw JSON results.
+The script checks `/v1/models`, then runs a `vllm bench serve` sweep over prompt length, context depth, and concurrency against `/v1/chat/completions` from inside the serving container. It copies the raw JSON results back to the repo and writes `summary.tsv` alongside them.
 
 ### Qwen3.6-27B on 2x RTX 3090
 

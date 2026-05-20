@@ -1,0 +1,43 @@
+services:
+  vllm:
+    image: ${QWEN35_VLLM_IMAGE:-vllm/vllm-openai:cu130-nightly-20260307}
+    container_name: vllm-qwen36-27b-dual
+    ports:
+      - "${PORT:-8010}:8000"
+    volumes:
+      - "${MODEL_DIR:-../models/Lorbus/Qwen3.6-27B-int4-AutoRound}:/models/qwen36-27b:ro"
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN:-}
+      - VLLM_WORKER_MULTIPROC_METHOD=spawn
+      - NCCL_CUMEM_ENABLE=0
+      - NCCL_P2P_DISABLE=1
+      - VLLM_NO_USAGE_STATS=1
+      - OMP_NUM_THREADS=1
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True,max_split_size_mb:512
+    shm_size: "16gb"
+    ipc: host
+    restart: unless-stopped
+    gpus:
+      - driver: nvidia
+        device_ids: ["1", "2"]
+        capabilities: [gpu]
+    command: >
+      /models/qwen36-27b
+      --served-model-name ${SERVED_MODEL_NAME:-qwen3.6-27b-autoround}
+      --quantization auto_round
+      --dtype float16
+      --tensor-parallel-size 2
+      --disable-custom-all-reduce
+      --max-model-len ${MAX_MODEL_LEN:-262144}
+      --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION:-0.92}
+      --max-num-seqs ${MAX_NUM_SEQS:-2}
+      --max-num-batched-tokens ${MAX_NUM_BATCHED_TOKENS:-8192}
+      --kv-cache-dtype fp8_e5m2
+      --trust-remote-code
+      --enable-prefix-caching
+      --enable-chunked-prefill
+      --enable-auto-tool-choice
+      --tool-call-parser qwen3_coder
+      --reasoning-parser qwen3
+      --speculative-config '{"method":"mtp","num_speculative_tokens":3}'
+      --host 0.0.0.0 --port 8000
