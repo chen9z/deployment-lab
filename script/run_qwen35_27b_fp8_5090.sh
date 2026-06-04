@@ -17,6 +17,8 @@ if [[ ! -x "$PYTHON_BIN" ]]; then
   exit 1
 fi
 
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-1}"
+
 MODEL_PATH="${MODEL_PATH:-$ROOT_DIR/models/Lorbus/Qwen3.6-27B-int4-AutoRound}"
 SERVED_MODEL_NAME="${SERVED_MODEL_NAME:-Qwen3.6-27B}"
 HOST="${HOST:-0.0.0.0}"

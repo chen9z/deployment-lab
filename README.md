@@ -84,10 +84,10 @@ SPECULATIVE_CONFIG='{"method":"mtp","num_speculative_tokens":2}' script/run_qwen
 
 ### Qwen3.6-27B Docker Compose on RTX 5090
 
-The Compose stack under `qwen3.5-27b/` now serves `models/Lorbus/Qwen3.6-27B-int4-AutoRound` on `GPU 0`. On the current machine, `nvidia-smi -L` shows `GPU 0` is the `RTX 5090`, so the stack is pinned to that card.
+The Compose stack under `qwen3.5-27b/` serves `models/Lorbus/Qwen3.6-27B-int4-AutoRound` on `GPU 1`. On the current machine, `nvidia-smi -L` shows `GPU 1` is the `RTX 5090`, so the stack is pinned to that card.
 
-By default the `vllm` service now uses `${QWEN36_VLLM_IMAGE:-vllm/vllm-openai:nightly}` so the stack can be redeployed against the latest pulled nightly image without editing the compose file again.
-The 5090 deployment now prioritizes maximum context with `--dtype half`, `--max-model-len 262144`, `--gpu-memory-utilization 0.92`, `--max-num-seqs 4`, `--max-num-batched-tokens 4096`, `--tool-call-parser qwen3_xml`, and MTP speculative decoding with `num_speculative_tokens=3`.
+By default the `vllm` service uses `${QWEN36_VLLM_IMAGE:-vllm/vllm-openai:nightly-rollback-20260516}` so the stack can be pinned or moved to a newer local image without editing the compose file.
+The 5090 deployment keeps the OpenAI-compatible endpoint on `http://127.0.0.1:8001` with served model name `Qwen3.5-27B`. It uses `--max-model-len 262144`, `--gpu-memory-utilization 0.93`, `--max-num-seqs 4`, `--max-num-batched-tokens 4128`, `fp8_e4m3` KV cache, FlashInfer attention, the enhanced Qwen chat template, and MTP speculative decoding with `num_speculative_tokens=3`.
 If the current stack cannot hold the full context window under load, lower `max_num_seqs` and `max_num_batched_tokens` first before reducing `max_model_len`.
 
 Start it with:

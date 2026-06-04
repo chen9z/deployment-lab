@@ -15,6 +15,8 @@ if [[ ! -x "$PYTHON_BIN" ]]; then
   exit 1
 fi
 
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-1}"
+
 MODEL_PATH="${MODEL_PATH:-/home/looper/.cache/modelscope/hub/models/Qwen/Qwen3.5-27B-FP8}"
 SERVED_MODEL_NAME="${SERVED_MODEL_NAME:-Qwen3.5-27B-FP8}"
 HOST="${HOST:-0.0.0.0}"

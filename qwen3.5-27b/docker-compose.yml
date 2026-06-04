@@ -6,20 +6,32 @@ services:
             - "8001:8001"
         volumes:
             - ../models/Lorbus/Qwen3.6-27B-int4-AutoRound:/models/qwen36-27b:ro
+            - ./qwen3.5-enhanced.jinja:/chat-template/qwen3.5-enhanced.jinja:ro
         environment:
             - HF_HOME=/root/.cache/huggingface
             - CUDA_DEVICE_ORDER=PCI_BUS_ID
+            - CUDA_VISIBLE_DEVICES=1
             - OMP_NUM_THREADS=4
-            - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-            - NVIDIA_VISIBLE_DEVICES=0
+            - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True,max_split_size_mb:512
+            - NVIDIA_VISIBLE_DEVICES=1
+            - VLLM_WORKER_MULTIPROC_METHOD=spawn
+            - VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1
+            - VLLM_NO_USAGE_STATS=1
+            - VLLM_FLOAT32_MATMUL_PRECISION=high
+            - VLLM_USE_FLASHINFER_SAMPLER=1
+            - VLLM_ALLOW_LONG_MAX_MODEL_LEN=1
+            - CUDA_DEVICE_MAX_CONNECTIONS=8
+            - NCCL_CUMEM_ENABLE=0
+            - NCCL_P2P_DISABLE=1
         ipc: host
+        shm_size: "16gb"
         restart: unless-stopped
         deploy:
             resources:
                 reservations:
                     devices:
                         - driver: nvidia
-                          device_ids: ["0"]
+                          device_ids: ["1"]
                           capabilities: [gpu]
 
         command: >
@@ -31,12 +43,13 @@ services:
             --kv-cache-dtype fp8_e4m3
             --gpu-memory-utilization 0.93
             --max-num-seqs 4
-            --max-num-batched-tokens 4096
+            --max-num-batched-tokens 4128
             --enable-chunked-prefill
             --performance-mode interactivity
             --enable-prefix-caching
             --attention-backend FLASHINFER
             --served-model-name Qwen3.5-27B
+            --chat-template /chat-template/qwen3.5-enhanced.jinja
             --host 0.0.0.0 --port 8001
             --disable-uvicorn-access-log
             --reasoning-parser qwen3

@@ -48,7 +48,7 @@ services:
       - \${HOME}/.cache/huggingface:/root/.cache/huggingface
     environment:
       - HF_HOME=/root/.cache/huggingface
-      - NVIDIA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=1
     ipc: host
     restart: unless-stopped
     deploy:
@@ -56,7 +56,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              device_ids: ["0"]
+              device_ids: ["1"]
               capabilities: [gpu]
 
     command: >
