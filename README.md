@@ -40,6 +40,21 @@ Start it with:
 docker compose -f qwen3.5-27b/docker-compose.yml up -d
 ```
 
+### Qwen3.6-27B Evaluation
+
+Model evaluation scripts live under `eval/` and default to the Qwen service at
+`http://127.0.0.1:8001` with served model name `Qwen3.5-27B`.
+
+```bash
+eval/verify.sh
+eval/verify-full.sh
+eval/bench.sh
+```
+
+Use `eval/verify-stress.sh` for slower long-context and prefill boundary
+checks after image or Compose changes. Override `URL`, `MODEL`, or `CONTAINER`
+when pointing the same scripts at another OpenAI-compatible endpoint.
+
 ### Gemma 4 Docker on 1x RTX 3090
 
 For containerized deployment on the first `RTX 3090` (`GPU 1`), the Gemma4 stack now builds a small local compatibility image on top of `vllm/vllm-openai:v0.19.1-cu130` and then starts the service:
@@ -77,6 +92,7 @@ patch set.
 
 ```
 deployment-lab/
+├── eval/               # Model evaluation scripts
 ├── gemma-4-26b/        # Gemma 4 26B Compose config
 ├── gemma-4-31b/        # Gemma 4 31B reference config and patches
 ├── jina-v5-embedding/  # Jina embedding vLLM Compose config
