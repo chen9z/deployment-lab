@@ -67,50 +67,6 @@ script/bench_qwen36_27b_int4_5090.sh
 
 The script checks `/v1/models`, then runs a `vllm bench serve` sweep over prompt length, context depth, and concurrency against `/v1/chat/completions` from inside the serving container. It copies the raw JSON results back to the repo and writes `summary.tsv` alongside them.
 
-### Qwen3.6-27B on 2x RTX 3090
-
-For the local `models/Lorbus/Qwen3.6-27B-int4-AutoRound` checkpoint, the dual-3090 Docker setup follows the reference `qwen36-dual-3090` recipe: tensor parallelism across two GPUs, `auto_round`, `fp8_e5m2` KV cache, `--disable-custom-all-reduce`, and speculative MTP.
-
-Start the containerized server:
-
-```bash
-script/run_qwen35_27b_awq_2x3090_docker.sh
-```
-
-Or invoke Compose directly:
-
-```bash
-docker compose -f qwen3.5-27b/docker-compose.2x3090.awq.yml up -d
-```
-
-Run a benchmark against the exposed OpenAI-compatible endpoint:
-
-```bash
-script/bench_qwen35_27b_awq_2x3090.sh
-```
-
-Stop the stack:
-
-```bash
-script/stop_qwen35_27b_awq_2x3090_docker.sh
-```
-
-Defaults:
-
-- Binds host `GPU 1,2` only, leaving the `RTX 5090` untouched
-- Serves on `http://127.0.0.1:8010`
-- Uses `--max-model-len 262144`
-- Uses `--max-num-batched-tokens 8192`
-- Uses `--kv-cache-dtype fp8_e5m2`
-- Uses `--speculative-config '{"method":"mtp","num_speculative_tokens":3}'`
-- Benchmarks one single-stream case and one `8`-concurrency throughput case via `vllm bench serve`
-
-If Docker GPU filtering is flaky on your machine, the existing host-side launcher still works:
-
-```bash
-script/run_qwen35_27b_awq_2x3090.sh
-```
-
 ### Gemma 4 Docker on 1x RTX 3090
 
 For containerized deployment on the first `RTX 3090` (`GPU 1`), the Gemma4 stack now builds a small local compatibility image on top of `vllm/vllm-openai:v0.19.1-cu130` and then starts the service:
@@ -134,7 +90,6 @@ The local patch only adjusts Gemma4 MoE compressed-tensors weight-name handling 
 ```
 deployment-lab/
 ├── gemma-4-26b/        # Gemma 4 26B Compose config
-├── gemma-4-31b/        # Gemma 4 31B Compose config and patches
 ├── jina-v5-embedding/  # Jina embedding vLLM Compose config
 ├── models/             # Local checkpoint subdirectories
 ├── qwen3.5-27b/        # Qwen 27B Compose config and runtime cache
