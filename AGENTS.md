@@ -4,7 +4,7 @@
 - `qwen3.5-27b/`, `gemma-4-26b/`, `gemma-4-31b/`, and `jina-v5-embedding/` hold model-specific Compose files, chat templates, patches, and runtime cache ignores.
 - Shell launch and benchmark helpers have been removed; prefer the retained model-specific Compose files.
 - `models/` stores local checkpoint subdirectories mounted by Compose files; do not treat it as an importable Python package.
-- `benchmark/` and `tests/` may contain archived manual scripts from the removed FastAPI wrapper service; prefer deployment-specific scripts under `script/`.
+- `benchmark/` and `tests/` may contain archived manual scripts from the removed FastAPI wrapper service.
 - `README.md` documents runtime instructions—update it with any new model support or CLI flags.
 
 ## Development & Runtime Commands

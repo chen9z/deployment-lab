@@ -1,9 +1,9 @@
 # Local Model Deployment Lab
 
-Deployment and benchmark scripts for local OpenAI-compatible model servers.
-The repository keeps Compose files, launch scripts, and benchmark helpers for
-the current local GPU estate. Model checkpoints live under `models/` or under
-absolute paths referenced by the relevant Compose file.
+Deployment configs for local OpenAI-compatible model servers. The repository
+keeps Compose files for the current local GPU estate. Model checkpoints live
+under `models/` or under absolute paths referenced by the relevant Compose
+file.
 
 ### Qwen3.6-27B INT4 AutoRound on RTX 5090 (32GB, vLLM + uv)
 
@@ -39,12 +39,6 @@ Start it with:
 ```bash
 docker compose -f qwen3.5-27b/docker-compose.yml up -d
 ```
-
-### Qwen3.6-27B Stress Benchmark
-
-Historical benchmark helper scripts have been removed. Use `vllm bench serve`
-or an OpenAI-compatible load generator against `http://127.0.0.1:8001` with
-served model name `Qwen3.5-27B`.
 
 ### Gemma 4 Docker on 1x RTX 3090
 
