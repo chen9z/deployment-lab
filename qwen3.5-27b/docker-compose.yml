@@ -7,6 +7,8 @@ services:
         volumes:
             - ../models/Lorbus/Qwen3.6-27B-int4-AutoRound:/models/qwen36-27b:ro
             - ./qwen3.5-enhanced.jinja:/chat-template/qwen3.5-enhanced.jinja:ro
+            - ./cache/torch_compile:/root/.cache/vllm/torch_compile_cache
+            - ./cache/triton:/root/.triton/cache
         environment:
             - HF_HOME=/root/.cache/huggingface
             - CUDA_DEVICE_ORDER=PCI_BUS_ID
@@ -20,6 +22,8 @@ services:
             - VLLM_FLOAT32_MATMUL_PRECISION=high
             - VLLM_USE_FLASHINFER_SAMPLER=1
             - VLLM_ALLOW_LONG_MAX_MODEL_LEN=1
+            - VLLM_MARLIN_USE_ATOMIC_ADD=${QWEN36_VLLM_MARLIN_USE_ATOMIC_ADD:-1}
+            - TRITON_CACHE_DIR=/root/.triton/cache
             - CUDA_DEVICE_MAX_CONNECTIONS=8
             - NCCL_CUMEM_ENABLE=0
             - NCCL_P2P_DISABLE=1
