@@ -1,24 +1,23 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `server.py` owns the FastAPI app, startup model preloading, and CLI entry (`python server.py --model ...`).
-- `api/` houses the router (`routes.py`), request/response schemas, and the lightweight model manager used by the endpoints.
-- `models/` contains the shared wrapper base plus per-model wrappers (e.g., Jina v4, Jina code, Qwen embeddings; Jina rerankers) registered by the factory.
-- `benchmark/` stores manual latency scripts for embeddings and rerankers.
-- `tests/` keeps minimal pytest coverage (e.g., factory wiring) plus archived manual scripts under `tests/scripts/`.
+- `qwen3.5-27b/`, `gemma-4-26b/`, `gemma-4-31b/`, and `jina-v5-embedding/` hold model-specific Compose files, chat templates, patches, and runtime cache ignores.
+- `script/` stores launch, stop, autotune, and vLLM benchmark helpers for local deployments.
+- `models/` stores local checkpoint subdirectories mounted by Compose files; do not treat it as an importable Python package.
+- `benchmark/` and `tests/` may contain archived manual scripts from the removed FastAPI wrapper service; prefer deployment-specific scripts under `script/`.
 - `README.md` documents runtime instructions—update it with any new model support or CLI flags.
 
 ## Development & Runtime Commands
-- Bootstrap with `python3 -m venv .venv && source .venv/bin/activate && pip install -e .[test]`.
-- Start the service via `python server.py` for default preload (`jina-embeddings-v4`, `jina-reranker-m0`) or override using repeated `--model` flags.
-- Use `uvicorn server:app --reload` while iterating; avoid committing reload mode defaults.
-- Benchmarks run from the `benchmark/` directory, e.g. `python benchmark/embedding_latency.py --model Qwen/Qwen3-Embedding-4B`.
+- Start Qwen 27B on the 5090 with `docker compose -f qwen3.5-27b/docker-compose.yml up -d`.
+- Run the Qwen vLLM sweep with `script/bench_qwen36_27b_int4_5090.sh`.
+- Start Gemma/Jina stacks with their model-specific Compose files or `script/run_*` helpers.
+- Avoid committing generated benchmark result directories or runtime caches.
 
 ## Coding Style & Naming Conventions
-Target Python 3.11, stick with four-space indentation, and keep module docstrings short. Use `snake_case` for functions and async helpers, `CamelCase` for wrappers, and verb-centric coroutine names (`compute_scores`). Prefer f-strings for logging and protect CUDA-only branches with `torch.cuda.is_available()`. Run `python -m black` before large refactors when possible.
+Target Python 3.11 for helper scripts, stick with four-space indentation, and keep module docstrings short. Use `snake_case` for functions and verb-centric helper names. Prefer f-strings for logging, quote shell variables in scripts, and keep Compose overrides explicit through environment variables. Run `python -m black` before large Python refactors when possible.
 
 ## Testing Guidelines
-`pytest` coverage currently focuses on the factory layer (`tests/test_factory.py`); API interfaces are validated manually through scripts in `tests/scripts/`. When adding new registry logic, extend or clone the factory tests rather than spinning up the API. Manual smoke checks should stay in the scripts directory with a module-level pytest skip guard.
+Validate changes with the narrowest deployment-specific check available: `docker compose config`, `/v1/models` smoke checks, and the relevant `script/bench_*` helper for performance-sensitive changes. Archived pytest/API tests may reference the removed FastAPI wrapper service and should not be treated as authoritative unless they are updated first.
 
 ## Commit & Pull Request Guidelines
 Write imperative, ≤60-character commit subjects (e.g., `Add Qwen embedding wrapper`). Document the rationale, mention executed sanity checks (`pytest`, benchmark scripts, manual curl), and call out new models or CLI flags in PR descriptions. Keep changes scoped; land benchmark tooling separately from API behavior tweaks when practical.

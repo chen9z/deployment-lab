@@ -1,48 +1,9 @@
-# Multi-Model Embedding & Reranking API Server
+# Local Model Deployment Lab
 
-FastAPI service that implements OpenAI-style `/v1/embeddings` and `/v1/rerank` endpoints. Models are loaded from Hugging Face and exposed through a minimal wrapper layer.
-
-## Supported Models
-
-- `jinaai/jina-embeddings-v4`
-- `jinaai/jina-embeddings-v5-text-small-retrieval`
-- `jinaai/jina-code-embeddings-1.5b`
-- `Qwen/Qwen3-Embedding-4B`
-- `jinaai/jina-reranker-m0`
-- `jinaai/jina-reranker-v2-base-multilingual`
-
-All wrappers live in `models/` and lazy-load checkpoints on demand.
-
-## Setup
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
-```
-
-## Running the Server
-
-Default start (preloads `jina-embeddings-v4` and `jina-reranker-m0`):
-
-```bash
-python server.py
-```
-
-Override preload list:
-
-```bash
-python server.py --model jinaai/jina-code-embeddings-1.5b --model Qwen/Qwen3-Embedding-4B
-```
-
-For `jinaai/jina-embeddings-v5-text-small-retrieval`, the service uses last-token pooling and returns normalized embeddings.
-The OpenAI-style embeddings endpoint does not carry a `prompt_name`, so retrieval callers should add their own `Query: ` or `Document: ` prefixes before sending text when they want query/document-specific prompting.
-
-You can still use uvicorn directly:
-
-```bash
-uvicorn server:app --host 0.0.0.0 --port 8000
-```
+Deployment and benchmark scripts for local OpenAI-compatible model servers.
+The repository keeps Compose files, launch scripts, and benchmark helpers for
+the current local GPU estate. Model checkpoints live under `models/` or under
+absolute paths referenced by the relevant Compose file.
 
 ### Qwen3.6-27B INT4 AutoRound on RTX 5090 (32GB, vLLM + uv)
 
@@ -168,41 +129,20 @@ This binds the OpenAI-compatible API to `http://127.0.0.1:8006`, serves the mode
 
 The local patch only adjusts Gemma4 MoE compressed-tensors weight-name handling for this AWQ checkpoint so that `v0.19.1-cu130` can load it successfully.
 
-### Endpoints
-- `GET /` – service metadata & supported models
-- `GET /v1/models` – supported models in OpenAI schema
-- `POST /v1/embeddings` – generate embeddings
-- `POST /v1/rerank` – rerank documents for a query
-
-## Benchmarks
-
-Manual performance scripts live in `benchmark/`. Activate your virtualenv, then run for example:
-
-```bash
-python benchmark/embedding_latency.py --model jinaai/jina-embeddings-v4
-```
-
-## Testing
-
-A small pytest suite validates the factory wiring:
-
-```bash
-pytest tests/test_factory.py
-```
-
 ## Project Layout
 
 ```
 deployment-lab/
-├── api/                # FastAPI routes & schemas
-├── benchmark/          # Benchmark scripts for embeddings/rerankers
-├── models/             # Model wrappers and factory
-├── server.py           # FastAPI application & CLI entrypoint
-├── tests/              # Pytest modules & manual scripts
+├── gemma-4-26b/        # Gemma 4 26B Compose config
+├── gemma-4-31b/        # Gemma 4 31B Compose config and patches
+├── jina-v5-embedding/  # Jina embedding vLLM Compose config
+├── models/             # Local checkpoint subdirectories
+├── qwen3.5-27b/        # Qwen 27B Compose config and runtime cache
+├── script/             # Launch, stop, and benchmark scripts
 └── README.md
 ```
 
 ## Notes
 
 - Hugging Face caches live under the default `HF_HOME`. Set it before launch if needed.
-- CUDA is used automatically when available; otherwise models fall back to CPU.
+- CUDA visibility is controlled by each launcher or Compose file.
