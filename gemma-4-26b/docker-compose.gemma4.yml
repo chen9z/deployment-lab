@@ -8,15 +8,15 @@ services:
       - ../models/cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit:/models/gemma-4-26B-A4B-it-AWQ-4bit:ro
     environment:
       - CUDA_DEVICE_ORDER=PCI_BUS_ID
-      - CUDA_VISIBLE_DEVICES=1
+      - CUDA_VISIBLE_DEVICES=2
       - HF_HOME=/root/.cache/huggingface
       - OMP_NUM_THREADS=4
       - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-      - NVIDIA_VISIBLE_DEVICES=1
+      - NVIDIA_VISIBLE_DEVICES=2
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     gpus:
       - driver: nvidia
-        device_ids: ["1"]
+        device_ids: ["2"]
         capabilities: [gpu]
     ipc: host
     restart: unless-stopped

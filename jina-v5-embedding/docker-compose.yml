@@ -1,0 +1,37 @@
+services:
+  vllm:
+    image: vllm/vllm-openai:nightly-rollback-20260516
+    container_name: vllm-jina-v5-embedding-3090
+    ports:
+      - "8016:8016"
+    volumes:
+      - ../models/jinaai/jina-embeddings-v5-text-small-retrieval:/models/jina-embeddings-v5-text-small-retrieval:ro
+    environment:
+      - CUDA_DEVICE_ORDER=PCI_BUS_ID
+      - CUDA_VISIBLE_DEVICES=0
+      - HF_HOME=/root/.cache/huggingface
+      - OMP_NUM_THREADS=4
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+      - NVIDIA_VISIBLE_DEVICES=0
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    gpus:
+      - driver: nvidia
+        device_ids: ["0"]
+        capabilities: [gpu]
+    ipc: host
+    restart: unless-stopped
+
+    command: >
+      /models/jina-embeddings-v5-text-small-retrieval
+      --served-model-name jina-embeddings-v5-text-small
+      --runner pooling
+      --pooler-config '{"pooling_type":"LAST"}'
+      --dtype bfloat16
+      --max-model-len 8192
+      --max-num-seqs 64
+      --max-num-batched-tokens 8192
+      --gpu-memory-utilization 0.20
+      --host 0.0.0.0
+      --port 8016
+      --disable-uvicorn-access-log
+      --no-use-tqdm-on-load
