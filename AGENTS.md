@@ -1,16 +1,16 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `qwen3.5-27b/`, `gemma-4-26b/`, and `jina-v5-embedding/` hold model-specific Compose files, chat templates, patches, and runtime cache ignores.
-- `script/` stores launch, stop, autotune, and vLLM benchmark helpers for local deployments.
+- `qwen3.5-27b/`, `gemma-4-26b/`, `gemma-4-31b/`, and `jina-v5-embedding/` hold model-specific Compose files, chat templates, patches, and runtime cache ignores.
+- Shell launch and benchmark helpers have been removed; prefer the retained model-specific Compose files.
 - `models/` stores local checkpoint subdirectories mounted by Compose files; do not treat it as an importable Python package.
 - `benchmark/` and `tests/` may contain archived manual scripts from the removed FastAPI wrapper service; prefer deployment-specific scripts under `script/`.
 - `README.md` documents runtime instructions—update it with any new model support or CLI flags.
 
 ## Development & Runtime Commands
 - Start Qwen 27B on the 5090 with `docker compose -f qwen3.5-27b/docker-compose.yml up -d`.
-- Run the Qwen vLLM sweep with `script/bench_qwen36_27b_int4_5090.sh`.
-- Start Gemma/Jina stacks with their model-specific Compose files or `script/run_*` helpers.
+- Run performance checks with `vllm bench serve` or an OpenAI-compatible load generator against the active Compose service.
+- Start Gemma/Jina stacks with their model-specific Compose files.
 - Avoid committing generated benchmark result directories or runtime caches.
 
 ## Coding Style & Naming Conventions

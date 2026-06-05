@@ -7,13 +7,10 @@ absolute paths referenced by the relevant Compose file.
 
 ### Qwen3.6-27B INT4 AutoRound on RTX 5090 (32GB, vLLM + uv)
 
-For local vLLM deployment of `Lorbus/Qwen3.6-27B-int4-AutoRound`, use the script below:
+The retained 5090 deployment path is the Docker Compose stack under
+`qwen3.5-27b/`. Historical shell launchers have been removed.
 
-```bash
-script/run_qwen35_27b_fp8_5090.sh
-```
-
-This keeps the tool-use settings from the model card and applies 5090-safe defaults:
+The Compose stack keeps these defaults:
 
 - `--tensor-parallel-size 1` on a single 5090 (auto-clamped if you set a larger value)
 - `--max-model-len 262144`
@@ -27,21 +24,7 @@ This keeps the tool-use settings from the model card and applies 5090-safe defau
 - `--compilation-config.cudagraph_mode none`
 - `--speculative-config '{"method":"mtp","num_speculative_tokens":3}'`
 
-Optional overrides:
-
-```bash
-MAX_MODEL_LEN=32768 GPU_MEMORY_UTILIZATION=0.99 PORT=8002 script/run_qwen35_27b_fp8_5090.sh
-```
-
-Speculative decode override:
-
-```bash
-# disable MTP
-SPECULATIVE_CONFIG=off script/run_qwen35_27b_fp8_5090.sh
-
-# custom MTP
-SPECULATIVE_CONFIG='{"method":"mtp","num_speculative_tokens":2}' script/run_qwen35_27b_fp8_5090.sh
-```
+Use environment variables with `docker compose` for overrides.
 
 ### Qwen3.6-27B Docker Compose on RTX 5090
 
@@ -59,13 +42,9 @@ docker compose -f qwen3.5-27b/docker-compose.yml up -d
 
 ### Qwen3.6-27B Stress Benchmark
 
-To benchmark the deployed 5090 service, run:
-
-```bash
-script/bench_qwen36_27b_int4_5090.sh
-```
-
-The script checks `/v1/models`, then runs a `vllm bench serve` sweep over prompt length, context depth, and concurrency against `/v1/chat/completions` from inside the serving container. It copies the raw JSON results back to the repo and writes `summary.tsv` alongside them.
+Historical benchmark helper scripts have been removed. Use `vllm bench serve`
+or an OpenAI-compatible load generator against `http://127.0.0.1:8001` with
+served model name `Qwen3.5-27B`.
 
 ### Gemma 4 Docker on 1x RTX 3090
 
@@ -75,25 +54,40 @@ For containerized deployment on the first `RTX 3090` (`GPU 1`), the Gemma4 stack
 docker compose -f gemma-4-26b/docker-compose.gemma4.yml up -d
 ```
 
-Run a quick benchmark against the Docker service:
-
-```bash
-script/bench_gemma4_26b_awq_3090.sh
-```
-
 This binds the OpenAI-compatible API to `http://127.0.0.1:8006`, serves the model as `gemma-4-26B-A4B`, keeps `temperature=1.0`, `top_p=0.95`, `top_k=64` as the default sampling config, enables `--enable-auto-tool-choice`, `--reasoning-parser gemma4`, `--tool-call-parser gemma4`, `--async-scheduling`, and allows up to `2` input images via `--limit-mm-per-prompt image=2`. Audio input is not enabled.
 
 The local patch only adjusts Gemma4 MoE compressed-tensors weight-name handling for this AWQ checkpoint so that `v0.19.1-cu130` can load it successfully.
+
+### Gemma 4 31B INT4 AutoRound on 2x RTX 3090
+
+The `gemma-4-31b/` directory keeps the dual-3090 Gemma 31B reference stack,
+including the Compose file and local vLLM patch overlays used for
+`Intel/gemma-4-31B-it-int4-AutoRound`.
+
+Models are expected under `/models` by default:
+
+- `/models/Intel/gemma-4-31B-it-int4-AutoRound`
+- `/models/google/gemma-4-31B-it-assistant`
+
+Invoke Compose directly:
+
+```bash
+docker compose -f gemma-4-31b/docker-compose.2x3090.autoround.yml up -d
+```
+
+The standalone run, stop, and benchmark helper scripts for this stack are not
+kept in the repository; the directory is retained as a reference Compose and
+patch set.
 
 ## Project Layout
 
 ```
 deployment-lab/
 ├── gemma-4-26b/        # Gemma 4 26B Compose config
+├── gemma-4-31b/        # Gemma 4 31B reference config and patches
 ├── jina-v5-embedding/  # Jina embedding vLLM Compose config
 ├── models/             # Local checkpoint subdirectories
 ├── qwen3.5-27b/        # Qwen 27B Compose config and runtime cache
-├── script/             # Launch, stop, and benchmark scripts
 └── README.md
 ```
 
