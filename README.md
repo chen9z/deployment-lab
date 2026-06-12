@@ -57,15 +57,26 @@ when pointing the same scripts at another OpenAI-compatible endpoint.
 
 ### Gemma 4 Docker on 1x RTX 3090
 
-For containerized deployment on the first `RTX 3090` (`GPU 1`), the Gemma4 stack now builds a small local compatibility image on top of `vllm/vllm-openai:v0.19.1-cu130` and then starts the service:
+For containerized deployment on the second `RTX 3090` (`GPU 2`), the Gemma4
+stack runs the local QAT AWQ INT4 checkpoint with
+`vllm/vllm-openai:nightly-rollback-20260516`:
 
 ```bash
 docker compose -f gemma-4-26b/docker-compose.gemma4.yml up -d
 ```
 
-This binds the OpenAI-compatible API to `http://127.0.0.1:8006`, serves the model as `gemma-4-26B-A4B`, keeps `temperature=1.0`, `top_p=0.95`, `top_k=64` as the default sampling config, enables `--enable-auto-tool-choice`, `--reasoning-parser gemma4`, `--tool-call-parser gemma4`, `--async-scheduling`, and allows up to `2` input images via `--limit-mm-per-prompt image=2`. Audio input is not enabled.
+This mounts
+`models/cyankiwi/gemma-4-26B-A4B-it-qat-AWQ-INT4`, binds the
+OpenAI-compatible API to `http://127.0.0.1:8006`, and serves the model as
+`gemma-4-26B-A4B`. It keeps `temperature=1.0`, `top_p=0.95`, and
+`top_k=64` as the default sampling config, enables
+`--enable-auto-tool-choice`, `--reasoning-parser gemma4`,
+`--tool-call-parser gemma4`, and `--async-scheduling`, and allows up to `2`
+input images via `--limit-mm-per-prompt image=2`. Audio input is not enabled.
 
-The local patch only adjusts Gemma4 MoE compressed-tensors weight-name handling for this AWQ checkpoint so that `v0.19.1-cu130` can load it successfully.
+The `vllm/vllm-openai:gemma-cu129` image does not currently start this
+checkpoint on the RTX 3090. Its CUDA 12.9 Marlin W4A16 MoE path fails in
+`gptq_marlin_moe_repack` with `CUDA driver error: device not ready`.
 
 ### Gemma 4 31B INT4 AutoRound on 2x RTX 3090
 
