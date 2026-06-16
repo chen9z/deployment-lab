@@ -1,37 +1,38 @@
 services:
-  vllm:
-    image: vllm/vllm-openai:nightly-rollback-20260516
-    container_name: vllm-jina-v5-embedding-3090
+  jina-embedding:
+    build:
+      context: .
+      args:
+        VLLM_IMAGE: ${JINA_VLLM_IMAGE:-vllm/vllm-openai:nightly-rollback-20260516}
+    image: deployment-lab/jina-embeddings-v5-text-small:latest
+    container_name: jina-embeddings-v5-text-small-3090
     ports:
       - "8016:8016"
     volumes:
-      - ../models/jinaai/jina-embeddings-v5-text-small-retrieval:/models/jina-embeddings-v5-text-small-retrieval:ro
+      - ../models/jinaai/jina-embeddings-v5-text-small:/models/jina-embeddings-v5-text-small:ro
     environment:
-      - CUDA_DEVICE_ORDER=PCI_BUS_ID
-      - CUDA_VISIBLE_DEVICES=0
-      - HF_HOME=/root/.cache/huggingface
-      - OMP_NUM_THREADS=4
-      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-      - NVIDIA_VISIBLE_DEVICES=0
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      CUDA_DEVICE_ORDER: PCI_BUS_ID
+      CUDA_VISIBLE_DEVICES: "0"
+      HF_HOME: /root/.cache/huggingface
+      OMP_NUM_THREADS: "4"
+      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+      NVIDIA_VISIBLE_DEVICES: "0"
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      MODEL_PATH: /models/jina-embeddings-v5-text-small
+      MODEL_NAME: jina-embeddings-v5-text-small
+      MAX_MODEL_LEN: ${JINA_MAX_MODEL_LEN:-32768}
+      MAX_NUM_SEQS: ${JINA_MAX_NUM_SEQS:-128}
+      MAX_NUM_BATCHED_TOKENS: ${JINA_MAX_NUM_BATCHED_TOKENS:-8192}
+      GPU_MEMORY_UTILIZATION: ${JINA_GPU_MEMORY_UTILIZATION:-0.26}
     gpus:
       - driver: nvidia
         device_ids: ["0"]
         capabilities: [gpu]
     ipc: host
     restart: unless-stopped
-
-    command: >
-      /models/jina-embeddings-v5-text-small-retrieval
-      --served-model-name jina-embeddings-v5-text-small
-      --runner pooling
-      --pooler-config '{"pooling_type":"LAST"}'
-      --dtype bfloat16
-      --max-model-len 8192
-      --max-num-seqs 64
-      --max-num-batched-tokens 8192
-      --gpu-memory-utilization 0.20
-      --host 0.0.0.0
-      --port 8016
-      --disable-uvicorn-access-log
-      --no-use-tqdm-on-load
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8016/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 120s

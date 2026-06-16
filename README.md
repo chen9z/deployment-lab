@@ -99,6 +99,63 @@ The standalone run, stop, and benchmark helper scripts for this stack are not
 kept in the repository; the directory is retained as a reference Compose and
 patch set.
 
+### Jina Embeddings v5 Text Small on RTX 3090
+
+The stack under `jina-v5-embedding/` serves the official multitask checkpoint
+at `models/jinaai/jina-embeddings-v5-text-small` through a Jina-compatible
+endpoint on `http://127.0.0.1:8016/v1/embeddings`. The served model name is
+`jina-embeddings-v5-text-small`.
+
+It uses one vLLM BF16 base model with four dynamic LoRA adapters for
+`retrieval`, `text-matching`, `classification`, and `clustering`. The gateway
+maps the Jina `task` field to the corresponding vLLM LoRA while retaining
+continuous batching, FlashAttention 2, torch compilation, and piecewise CUDA
+Graphs. The base model is forced to the raw `Qwen3Model`; otherwise vLLM's
+Jina-specific loader would merge the retrieval adapter before applying the
+selected dynamic LoRA.
+
+Returned float embeddings are always L2-normalized. Supported Matryoshka
+dimensions are `32`, `64`, `128`, `256`, `512`, `768`, and `1024`, and the
+configured context limit is 32768 tokens. The default GPU memory utilization is
+`0.26`, which allocates enough KV cache for one 32K request while using about
+6.4 GiB on the current RTX 3090.
+
+Start or rebuild it with:
+
+```bash
+docker compose -f jina-v5-embedding/docker-compose.yml up -d --build
+```
+
+The API accepts plain OpenAI-style strings and Jina-style text objects:
+
+```bash
+curl http://127.0.0.1:8016/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "jina-embeddings-v5-text-small",
+    "task": "retrieval.query",
+    "dimensions": 256,
+    "normalized": true,
+    "input": [{"text": "Which planet is known as the Red Planet?"}]
+  }'
+```
+
+Use `retrieval.query` or `retrieval.passage` to apply the model's `Query: ` or
+`Document: ` prefix. The API also accepts `retrieval`, `text-matching`,
+`classification`, and `clustering`; the corresponding adapter is activated
+for each request. A mixed retrieval request can set `prompt_name` to `query`
+or `document` on each input object. Authorization headers are accepted but
+are not validated by this local service.
+
+This is a text-only model. Inputs containing an `image` field return HTTP 400.
+Use `jina-embeddings-v5-omni-small`, `jina-embeddings-v4`, or a Jina CLIP model
+when text and images must share an embedding space.
+
+Benchmark methodology and the deployment comparisons are recorded in
+`jina-v5-embedding/BENCHMARK.md`. The model is distributed under CC BY-NC 4.0;
+review the [model card](https://huggingface.co/jinaai/jina-embeddings-v5-text-small)
+before commercial use.
+
 ## Project Layout
 
 ```
@@ -106,7 +163,7 @@ deployment-lab/
 ├── eval/               # Model evaluation scripts
 ├── gemma-4-26b/        # Gemma 4 26B Compose config
 ├── gemma-4-31b/        # Gemma 4 31B reference config and patches
-├── jina-v5-embedding/  # Jina embedding vLLM Compose config
+├── jina-v5-embedding/  # Jina-compatible embedding service and benchmark
 ├── models/             # Local checkpoint subdirectories
 ├── qwen3.5-27b/        # Qwen 27B Compose config and runtime cache
 └── README.md
