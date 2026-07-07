@@ -1,6 +1,6 @@
 services:
     vllm:
-        image: ${QWEN36_VLLM_IMAGE:-vllm/vllm-openai:nightly-rollback-20260516}
+        image: ${QWEN36_VLLM_IMAGE:-vllm/vllm-openai:v0.24.0-cu129-ubuntu2404}
         container_name: vllm-qwen36-27b
         ports:
             - "8001:8001"
@@ -12,10 +12,10 @@ services:
         environment:
             - HF_HOME=/root/.cache/huggingface
             - CUDA_DEVICE_ORDER=PCI_BUS_ID
-            - CUDA_VISIBLE_DEVICES=1
-            - OMP_NUM_THREADS=4
-            - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True,max_split_size_mb:512
-            - NVIDIA_VISIBLE_DEVICES=1
+            - CUDA_VISIBLE_DEVICES=GPU-75728f1a-e231-2821-3004-09e128fb3835
+            - OMP_NUM_THREADS=1
+            - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:False,max_split_size_mb:512
+            - NVIDIA_VISIBLE_DEVICES=GPU-75728f1a-e231-2821-3004-09e128fb3835
             - VLLM_WORKER_MULTIPROC_METHOD=spawn
             - VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1
             - VLLM_NO_USAGE_STATS=1
@@ -35,7 +35,7 @@ services:
                 reservations:
                     devices:
                         - driver: nvidia
-                          device_ids: ["1"]
+                          device_ids: ["GPU-75728f1a-e231-2821-3004-09e128fb3835"]
                           capabilities: [gpu]
 
         command: >
@@ -43,6 +43,7 @@ services:
             --tensor-parallel-size 1
             --max-model-len 262144
             --quantization auto_round
+            --dtype float16
             --skip-mm-profiling
             --kv-cache-dtype fp8_e4m3
             --gpu-memory-utilization 0.93
@@ -60,7 +61,7 @@ services:
             --enable-auto-tool-choice
             --tool-call-parser qwen3_coder
             --limit-mm-per-prompt.video 0
-            --speculative-config '{"method": "mtp", "num_speculative_tokens": 3}'
+            --speculative-config '{"method":"mtp","num_speculative_tokens":3,"quantization":null}'
             --async-scheduling
             --generation-config auto
             --override-generation-config '{"temperature":0.6,"top_p":0.95,"top_k":20,"min_p":0.0,"presence_penalty":0.0,"repetition_penalty":1.0}'

@@ -5,7 +5,7 @@ keeps Compose files for the current local GPU estate. Model checkpoints live
 under `models/` or under absolute paths referenced by the relevant Compose
 file.
 
-### Qwen3.6-27B INT4 AutoRound on RTX 5090 (32GB, vLLM + uv)
+### Qwen3.6-27B INT4 AutoRound on RTX 5090 (32GB, vLLM)
 
 The retained 5090 deployment path is the Docker Compose stack under
 `qwen3.5-27b/`. Historical shell launchers have been removed.
@@ -14,24 +14,26 @@ The Compose stack keeps these defaults:
 
 - `--tensor-parallel-size 1` on a single 5090 (auto-clamped if you set a larger value)
 - `--max-model-len 262144`
-- `--dtype half`
-- `--gpu-memory-utilization 0.92`
-- `--max-num-seqs 1`
-- `--kv-cache-dtype fp8`
+- `--quantization auto_round`
+- `--dtype float16`
+- `--gpu-memory-utilization 0.93`
+- `--max-num-seqs 4`
+- `--max-num-batched-tokens 4128`
+- `--kv-cache-dtype fp8_e4m3`
+- `--attention-backend FLASHINFER`
 - `--reasoning-parser qwen3`
 - `--enable-auto-tool-choice`
-- `--tool-call-parser qwen3_xml`
-- `--compilation-config.cudagraph_mode none`
-- `--speculative-config '{"method":"mtp","num_speculative_tokens":3}'`
+- `--tool-call-parser qwen3_coder`
+- `--speculative-config '{"method":"mtp","num_speculative_tokens":3,"quantization":null}'`
 
 Use environment variables with `docker compose` for overrides.
 
 ### Qwen3.6-27B Docker Compose on RTX 5090
 
-The Compose stack under `qwen3.5-27b/` serves `models/Lorbus/Qwen3.6-27B-int4-AutoRound` on `GPU 1`. On the current machine, `nvidia-smi -L` shows `GPU 1` is the `RTX 5090`, so the stack is pinned to that card.
+The Compose stack under `qwen3.5-27b/` serves `models/Lorbus/Qwen3.6-27B-int4-AutoRound` on the RTX 5090. On the current machine, `nvidia-smi -L` shows `GPU 1` is the `RTX 5090`, so the stack is pinned to that card by UUID.
 
-By default the `vllm` service uses `${QWEN36_VLLM_IMAGE:-vllm/vllm-openai:nightly-rollback-20260516}` so the stack can be pinned or moved to a newer local image without editing the compose file.
-The 5090 deployment keeps the OpenAI-compatible endpoint on `http://127.0.0.1:8001` with served model name `Qwen3.5-27B`. It uses `--max-model-len 262144`, `--gpu-memory-utilization 0.93`, `--max-num-seqs 4`, `--max-num-batched-tokens 4128`, `fp8_e4m3` KV cache, FlashInfer attention, the enhanced Qwen chat template, and MTP speculative decoding with `num_speculative_tokens=3`.
+By default the `vllm` service uses `${QWEN36_VLLM_IMAGE:-vllm/vllm-openai:v0.24.0-cu129-ubuntu2404}` so the stack uses the local CUDA 12.9 vLLM image while still allowing image overrides without editing the compose file.
+The 5090 deployment keeps the OpenAI-compatible endpoint on `http://127.0.0.1:8001` with served model name `Qwen3.5-27B`. It uses `--max-model-len 262144`, `--dtype float16`, `--gpu-memory-utilization 0.93`, `--max-num-seqs 4`, `--max-num-batched-tokens 4128`, `fp8_e4m3` KV cache, FlashInfer attention, the enhanced Qwen chat template, and MTP speculative decoding with `num_speculative_tokens=3`. A 255K-token completion request has been smoke-tested on the 5090. `OMP_NUM_THREADS=1` follows the club-3090 vLLM profiles and reduced host-side thread fan-out without hurting decode throughput. `PYTORCH_CUDA_ALLOC_CONF` is set to `expandable_segments:False,max_split_size_mb:512`; the local CUDA 12.9 vLLM image fails during Qwen MTP drafter allocation with expandable segments enabled.
 If the current stack cannot hold the full context window under load, lower `max_num_seqs` and `max_num_batched_tokens` first before reducing `max_model_len`.
 
 Start it with:
