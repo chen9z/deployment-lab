@@ -80,6 +80,14 @@ The `vllm/vllm-openai:gemma-cu129` image does not currently start this
 checkpoint on the RTX 3090. Its CUDA 12.9 Marlin W4A16 MoE path fails in
 `gptq_marlin_moe_repack` with `CUDA driver error: device not ready`.
 
+The tuned 3090 defaults use a 131072-token context window,
+`--max-num-seqs 16`, and `--max-num-batched-tokens 8192`. Override them
+without editing the Compose file by setting `GEMMA_MAX_MODEL_LEN`,
+`GEMMA_MAX_NUM_SEQS`, or `GEMMA_MAX_NUM_BATCHED_TOKENS` when invoking
+Compose. The 128K profile retains roughly 140K tokens of GPU KV cache on the
+current card, so it supports one full-length request or a larger batch of
+shorter requests.
+
 ### Gemma 4 31B INT4 AutoRound on 2x RTX 3090
 
 The `gemma-4-31b/` directory keeps the dual-3090 Gemma 31B reference stack,
