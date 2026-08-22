@@ -1,0 +1,56 @@
+services:
+    ninfer:
+        image: ${QWEN38_NINFER_IMAGE:-ninfer:local}
+        build:
+            context: ../ninfer
+            dockerfile: Dockerfile
+        container_name: ninfer-qwen38-27b-nvfp4
+        ports:
+            - "8001:8080"
+        volumes:
+            - ${QWEN38_NINFER_ARTIFACT:-../models/neroued/Qwen3.8-27B-nvfp4-NInfer/qwen3_8_27b_nvfp4.ninfer}:/models/qwen3_8_27b_nvfp4.ninfer:ro
+            - ./logs:/logs
+        environment:
+            - CUDA_DEVICE_ORDER=PCI_BUS_ID
+            - CUDA_VISIBLE_DEVICES=GPU-75728f1a-e231-2821-3004-09e128fb3835
+            - OMP_NUM_THREADS=1
+        restart: unless-stopped
+        stop_grace_period: 30s
+        deploy:
+            resources:
+                reservations:
+                    devices:
+                        - driver: nvidia
+                          device_ids: ["GPU-75728f1a-e231-2821-3004-09e128fb3835"]
+                          capabilities: [gpu]
+        command:
+            - ninfer-serve
+            - /models/qwen3_8_27b_nvfp4.ninfer
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8080"
+            - --model-id
+            - Qwen3.5-27B
+            - --max-context
+            - ${QWEN38_MAX_CONTEXT:-262144}
+            - --kv-capacity
+            - ${QWEN38_KV_CAPACITY:-262144}
+            - --max-concurrency
+            - ${QWEN38_MAX_CONCURRENCY:-4}
+            - --max-pending-requests
+            - ${QWEN38_MAX_PENDING_REQUESTS:-16}
+            - --pending-timeout-ms
+            - ${QWEN38_PENDING_TIMEOUT_MS:-300000}
+            - --prefill-chunk
+            - ${QWEN38_PREFILL_CHUNK:-1024}
+            - --kv-dtype
+            - int8
+            - --spec
+            - mtp
+            - --draft-tokens
+            - "3"
+            - --lm-head-draft
+            - --no-thinking
+            - --request-log-jsonl
+            - /logs/requests.jsonl

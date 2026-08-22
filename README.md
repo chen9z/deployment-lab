@@ -5,42 +5,54 @@ keeps Compose files for the current local GPU estate. Model checkpoints live
 under `models/` or under absolute paths referenced by the relevant Compose
 file.
 
-### Qwen3.6-27B INT4 AutoRound on RTX 5090 (32GB, vLLM)
+### Qwen3.8-27B NVFP4 on RTX 5090 (NInfer)
 
-The retained 5090 deployment path is the Docker Compose stack under
-`qwen3.5-27b/`. Historical shell launchers have been removed.
+The default 27B stack is `qwen3.8-27b/docker-compose.yml`. It builds the local
+`ninfer/` source, loads the registered Qwen3.8-27B NVFP4 `.ninfer` artifact,
+and pins execution to the RTX 5090. The public OpenAI-compatible model alias
+remains `Qwen3.5-27B` so existing callers can move to the new weights without
+changing request payloads.
 
-The Compose stack keeps these defaults:
+The default profile keeps a 262,144-token per-request ceiling and one shared
+262,144-token INT8 KV pool for four active request lanes. One request can use
+the complete context window; concurrent shorter requests share that pool and
+form compact decode batches. MTP3, the optimized proposal head, CUDA Graphs,
+and prefix reuse are enabled. The sampling defaults match the repository's
+embedded Qwen3.8 profiles: thinking uses `1.0/0.95/20/0/0`, while
+non-thinking uses `0.7/0.8/20/0/1.5` for
+temperature/top-p/top-k/min-p/presence penalty. Thinking is disabled by
+default; callers can explicitly enable it with the top-level `enable_thinking`
+or `reasoning_effort` request field.
 
-- `--tensor-parallel-size 1` on a single 5090 (auto-clamped if you set a larger value)
-- `--max-model-len 262144`
-- `--quantization auto_round`
-- `--dtype float16`
-- `--gpu-memory-utilization 0.93`
-- `--max-num-seqs 4`
-- `--max-num-batched-tokens 4128`
-- `--kv-cache-dtype fp8_e4m3`
-- `--attention-backend FLASHINFER`
-- `--reasoning-parser qwen3`
-- `--enable-auto-tool-choice`
-- `--tool-call-parser qwen3_coder`
-- `--speculative-config '{"method":"mtp","num_speculative_tokens":3,"quantization":null}'`
-
-Use environment variables with `docker compose` for overrides.
-
-### Qwen3.6-27B Docker Compose on RTX 5090
-
-The Compose stack under `qwen3.5-27b/` serves `models/Lorbus/Qwen3.6-27B-int4-AutoRound` on the RTX 5090. On the current machine, `nvidia-smi -L` shows `GPU 1` is the `RTX 5090`, so the stack is pinned to that card by UUID.
-
-By default the `vllm` service uses `${QWEN36_VLLM_IMAGE:-vllm/vllm-openai:v0.24.0-cu129-ubuntu2404}` so the stack uses the local CUDA 12.9 vLLM image while still allowing image overrides without editing the compose file.
-The 5090 deployment keeps the OpenAI-compatible endpoint on `http://127.0.0.1:8001` with served model name `Qwen3.5-27B`. It uses `--max-model-len 262144`, `--dtype float16`, `--gpu-memory-utilization 0.93`, `--max-num-seqs 4`, `--max-num-batched-tokens 4128`, `fp8_e4m3` KV cache, FlashInfer attention, the enhanced Qwen chat template, and MTP speculative decoding with `num_speculative_tokens=3`. A 255K-token completion request has been smoke-tested on the 5090. `OMP_NUM_THREADS=1` follows the club-3090 vLLM profiles and reduced host-side thread fan-out without hurting decode throughput. `PYTORCH_CUDA_ALLOC_CONF` is set to `expandable_segments:False,max_split_size_mb:512`; the local CUDA 12.9 vLLM image fails during Qwen MTP drafter allocation with expandable segments enabled.
-If the current stack cannot hold the full context window under load, lower `max_num_seqs` and `max_num_batched_tokens` first before reducing `max_model_len`.
-
-Start it with:
+Start it on the repository's standard Qwen endpoint:
 
 ```bash
-docker compose -f qwen3.5-27b/docker-compose.yml up -d
+docker compose -f qwen3.8-27b/docker-compose.yml up -d
 ```
+
+The endpoint remains `http://127.0.0.1:8001/v1`. NInfer also exposes its
+Anthropic-compatible endpoint on the same port. Override the image or artifact
+with `QWEN38_NINFER_IMAGE` or `QWEN38_NINFER_ARTIFACT`. Tune the logical
+context ceiling, shared KV pool, active lanes, pending queue, or prefill chunk
+with `QWEN38_MAX_CONTEXT`, `QWEN38_KV_CAPACITY`,
+`QWEN38_MAX_CONCURRENCY`, `QWEN38_MAX_PENDING_REQUESTS`, or
+`QWEN38_PREFILL_CHUNK`. Pending requests wait up to 300 seconds by default;
+override that bound with `QWEN38_PENDING_TIMEOUT_MS`.
+
+The validated RTX 5090 profile accepted a 260,096-token prompt and returned
+the expected NIAH value. Four concurrent 4,096-token structured generations
+completed in 24.41 seconds with the embedded non-thinking sampler and sustained
+769.9 aggregate decode tok/s over complete full-batch intervals. Four concurrent
+4,096-token reasoning generations completed in 40.15 seconds and sustained
+426.6 aggregate decode tok/s with the embedded thinking sampler. The C=4 layout
+leaves little unused device memory; do not raise concurrency without reducing
+the shared KV capacity.
+
+### Legacy Qwen3.6-27B stack
+
+The prior vLLM deployment remains under `qwen3.5-27b/` as a legacy reference,
+but it is no longer the default 27B service. It uses the same RTX 5090 and port
+8001, so stop the NInfer stack before starting that Compose file.
 
 ### Qwen3.6-27B Evaluation
 
@@ -175,7 +187,9 @@ deployment-lab/
 ├── gemma-4-31b/        # Gemma 4 31B reference config and patches
 ├── jina-v5-embedding/  # Jina-compatible embedding service and benchmark
 ├── models/             # Local checkpoint subdirectories
-├── qwen3.5-27b/        # Qwen 27B Compose config and runtime cache
+├── qwen3.5-27b/        # Legacy Qwen 27B vLLM Compose stack
+├── qwen3.8-27b/        # Default Qwen 27B NInfer Compose stack
+├── ninfer/             # NInfer C++/CUDA inference engine
 └── README.md
 ```
 
