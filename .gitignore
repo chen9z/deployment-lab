@@ -38,3 +38,9 @@ models/
 
 # Runtime compile caches
 gemma-4-31b/cache/
+
+# Runtime-generated logs (ninfer serve request logs)
+runtime/
+
+# External ninfer runtime (cloned separately, not tracked)
+ninfer/
